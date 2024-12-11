@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  nginx:
+    container_name: nginx_gateway
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    networks:
+      - app_network
+
+  db:
+    image: mysql:8.0
+    container_name: db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: ./backend_service/
+      dockerfile: Dockerfile
+    container_name: backend
+    command: >
+      sh -c "python manage.py makemigrations && \
+      python manage.py migrate && \
+      python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - media_volume:/app/media
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+volumes:
+  db_data:
+    driver: local
+  media_volume:
+
+networks:
+  app_network:
+    driver: bridge
